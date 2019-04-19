@@ -19,12 +19,19 @@ import android.widget.TextView;
 import com.example.administrator.myweather.db.City;
 import com.example.administrator.myweather.db.County;
 import com.example.administrator.myweather.db.Province;
+import com.example.administrator.myweather.util.HttpUtil;
+import com.example.administrator.myweather.util.Utility;
 
 import org.litepal.LitePal;
 import org.litepal.crud.LitePalSupport;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Response;
 
 public class ChooseAreaFragment extends Fragment {
     public static final int LEVEL_PROVINCE=0;
@@ -108,7 +115,7 @@ public class ChooseAreaFragment extends Fragment {
     }
 
     /**
-     * 查询全国所有的省，有限从数据库查，如果查不到再到服务器去查
+     * 查询全国所有的省，优先从数据库查，如果查不到再到服务器去查
      */
     private void queryProvinces(){
         titleText.setText("中国");
@@ -126,7 +133,118 @@ public class ChooseAreaFragment extends Fragment {
             //从服务器上查询
             String address="http://guolin.tech/api/china";
             //根据地址从数据库上开始查询
-            qureyFromServer(address,"province");
+            queryFromServer(address,"province");
+        }
+    }
+
+    /**
+     * 查询全国所有的市，优先从数据库查，如果查不到再到服务器去查
+     */
+    private void queryCities(){
+        titleText.setText(selectedProvince.getProvinceName());
+        backButton.setVisibility(View.VISIBLE);
+        cityList=LitePal.where("provinceid=?",String.valueOf(selectedProvince.getId())).find(City.class);
+        if(cityList.size()>0){
+            dataList.clear();
+            for(City city:cityList){
+                dataList.add(city.getCityName());
+            }
+            adapter.notifyDataSetChanged();
+            listView.setSelection(0);
+            currentLevel=LEVEL_CITY;
+        }else {
+            int provinceCode=selectedProvince.getProvinceCode();
+            //从服务器上查询
+            String address="http://guolin.tech/api/china/"+provinceCode;
+            queryFromServer(address,"city");
+        }
+    }
+
+    /**
+     * 查询全国所有的县，优先从数据库查，如果查不到再到服务器去查
+     */
+    private void queryCounties(){
+        titleText.setText(selectedCity.getCityName());
+        backButton.setVisibility(View.VISIBLE);
+        countyList=LitePal.where("cityid=?",String.valueOf(selectedCity.getId())).find(County.class);
+        if(countyList.size()>0){
+            dataList.clear();
+            for(County county:countyList){
+                dataList.add(county.getCountyName());
+            }
+            adapter.notifyDataSetChanged();
+            listView.setSelection(0);
+            currentLevel=LEVEL_COUNTY;
+        }else {
+            int provinceCode=selectedProvince.getProvinceCode();
+            int cityCode=selectedCity.getCityCode();
+            //从服务器上查询
+            String address="http://guolin.tech/api/china/"+provinceCode+"/"+cityCode;
+            queryFromServer(address,"county");
+        }
+    }
+
+    /**
+     * 根据传入的地址和类型从服务器上查询省市县数据
+     */
+    private void queryFromServer(String address,final String type){
+     showProgressDialog();//
+        HttpUtil.sendOkHttpRequest(address, new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+
+                String responcseText=response.body().toString();
+                boolean result=false;
+                if("province".equals(type)){
+                    result= Utility.handleProvinceResponse(responcseText);
+                }else if("city".equals(type)){
+                    result=Utility.handleCityResponse(responcseText,selectedProvince.getId());
+                }else if("county".equals(type)){
+                    result=Utility.handleCountyResponse(responcseText,selectedCity.getId());
+                }
+                //
+                if(result){
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            closeProgressDialog();
+                            if ("province".equals(type)) {
+                                queryProvinces();
+                            }else if("city".equals(type)){
+                                queryCities();
+                            }else if("county".equals(type)){
+                                queryCounties();
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    /**
+     * 显示进度对话框
+     */
+    private void showProgressDialog(){
+
+        if(progressDialog==null){
+            progressDialog=new ProgressDialog(getActivity());
+            progressDialog.setMessage("正在加载............");
+            progressDialog.setCanceledOnTouchOutside(false);
+        }
+        progressDialog.show();
+    }
+    /**
+     * 关闭进度对话框
+     */
+    private void closeProgressDialog(){
+        if(progressDialog!=null){
+            progressDialog.dismiss();
         }
     }
 }
