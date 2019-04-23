@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,6 +17,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.administrator.myweather.db.City;
 import com.example.administrator.myweather.db.County;
@@ -22,6 +25,7 @@ import com.example.administrator.myweather.db.Province;
 import com.example.administrator.myweather.util.HttpUtil;
 import com.example.administrator.myweather.util.Utility;
 
+import org.json.JSONObject;
 import org.litepal.LitePal;
 import org.litepal.crud.LitePalSupport;
 
@@ -32,6 +36,9 @@ import java.util.List;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class ChooseAreaFragment extends Fragment {
     public static final int LEVEL_PROVINCE=0;
@@ -87,6 +94,7 @@ public class ChooseAreaFragment extends Fragment {
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
+
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int position, long l) {
@@ -110,7 +118,7 @@ public class ChooseAreaFragment extends Fragment {
                 }
             }
         });
-        //
+        //第一次装载省级数据
         queryProvinces();
     }
 
@@ -121,6 +129,7 @@ public class ChooseAreaFragment extends Fragment {
         titleText.setText("中国");
         backButton.setVisibility(View.GONE);
         provinceList= LitePal.findAll(Province.class);
+        //
         if(provinceList.size()>0){
             dataList.clear();
             for(Province province:provinceList){
@@ -132,8 +141,9 @@ public class ChooseAreaFragment extends Fragment {
         }else {
             //从服务器上查询
             String address="http://guolin.tech/api/china";
+           // String addressA="http://10.2.2.114:8081/china.json";
             //根据地址从数据库上开始查询
-            queryFromServer(address,"province");
+           queryFromServer(address,"province");
         }
     }
 
@@ -188,31 +198,40 @@ public class ChooseAreaFragment extends Fragment {
      * 根据传入的地址和类型从服务器上查询省市县数据
      */
     private void queryFromServer(String address,final String type){
-     showProgressDialog();//
+       //  showProgressDialog();//
         HttpUtil.sendOkHttpRequest(address, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
 
+                //返回到主线程处理数据下载失败逻辑
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        closeProgressDialog();
+                        Toast.makeText(getContext(),"加载数据失败!",Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
-
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-
-                String responcseText=response.body().toString();
-                boolean result=false;
+                //获取抓取下来的数据
+                final String responseText=response.body().string();
+                boolean result=true;
+               //
                 if("province".equals(type)){
-                    result= Utility.handleProvinceResponse(responcseText);
+                    result= Utility.handleProvinceResponse(responseText);
                 }else if("city".equals(type)){
-                    result=Utility.handleCityResponse(responcseText,selectedProvince.getId());
+                    result=Utility.handleCityResponse(responseText,selectedProvince.getId());
                 }else if("county".equals(type)){
-                    result=Utility.handleCountyResponse(responcseText,selectedCity.getId());
+                    result=Utility.handleCountyResponse(responseText,selectedCity.getId());
                 }
-                //
+
+                //从服务器下载数据后再查数据库
                 if(result){
                     getActivity().runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            closeProgressDialog();
+                           closeProgressDialog();
                             if ("province".equals(type)) {
                                 queryProvinces();
                             }else if("city".equals(type)){
@@ -222,7 +241,17 @@ public class ChooseAreaFragment extends Fragment {
                             }
                         }
                     });
+                }else {
+
+                    //返回到主线程处理数据下载失败逻辑
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                                Toast.makeText(getContext(), "数据存入数据库失败!"+responseText, Toast.LENGTH_LONG).show();
+                        }
+                    });
                 }
+
             }
         });
     }
