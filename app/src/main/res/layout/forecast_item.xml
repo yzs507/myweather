@@ -11,7 +11,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
         android:layout_weight="2"
-        android:textColor="#fff"/>
+        android:textColor="#f9f4f4"/>
     <TextView
         android:id="@+id/info_text"
         android:layout_width="0dp"
@@ -19,7 +19,7 @@
         android:layout_gravity="center_vertical"
         android:layout_weight="1"
         android:gravity="center"
-        android:textColor="#fff"/>
+        android:textColor="#fbf8f8"/>
     <TextView
         android:id="@+id/max_text"
         android:layout_width="0dp"
@@ -27,7 +27,7 @@
         android:layout_gravity="center_vertical"
         android:layout_weight="1"
         android:gravity="right"
-        android:textColor="#fff"/>
+        android:textColor="#f3f0f0"/>
     <TextView
         android:id="@+id/min_text"
         android:layout_width="0dp"
@@ -35,6 +35,6 @@
         android:layout_gravity="center_vertical"
         android:layout_weight="1"
         android:gravity="right"
-        android:textColor="#fff"/>
+        android:textColor="#fefafa"/>
 
 </LinearLayout>
