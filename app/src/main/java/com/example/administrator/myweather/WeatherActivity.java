@@ -1,5 +1,6 @@
 package com.example.administrator.myweather;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
@@ -21,6 +22,7 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.example.administrator.myweather.gson.Forecast;
 import com.example.administrator.myweather.gson.Weather;
+import com.example.administrator.myweather.service.AutoUpdateService;
 import com.example.administrator.myweather.util.HttpUtil;
 import com.example.administrator.myweather.util.Utility;
 
@@ -176,7 +178,7 @@ public class WeatherActivity extends AppCompatActivity {
      * 处理并展示Weater实体中信息
      */
     private void showWeatherInfo(Weather weather){
-       // Toast.makeText(WeatherActivity.this,"获取天气成功"+weather.basic.cityName,Toast.LENGTH_LONG).show();
+        if(weather!=null&&"ok".equals(weather.status)){
        String cityName=weather.basic.cityName;
         String updateTime=weather.basic.update.updateTime.split(" ")[1];
         String degree=weather.now.temperature+"℃";
@@ -218,6 +220,13 @@ public class WeatherActivity extends AppCompatActivity {
         sportText.setText(sport);
         //
         weatherLayout.setVisibility(View.VISIBLE);
+        //启动后台服务更新天气
+            Intent intent=new Intent(this, AutoUpdateService.class);
+            startService(intent);
+        }
+        else {
+            Toast.makeText(WeatherActivity.this,"获取天气失败!",Toast.LENGTH_LONG).show();
+        }
 
 
 
