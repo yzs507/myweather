@@ -51,6 +51,7 @@ public class WeatherActivity extends AppCompatActivity {
      public SwipeRefreshLayout swipRefresh;
      public DrawerLayout drawerLayout;
      private Button navButton;
+     private String mweatherId;
 
 
     @Override
@@ -87,7 +88,7 @@ public class WeatherActivity extends AppCompatActivity {
         SharedPreferences prefs= PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString=prefs.getString("weather",null);
         String bingPic=prefs.getString("bing_pic",null);
-        final String weatherId;
+        //final String weatherId;
         //装载背景图片
         if(bingPic!=null){
             //有缓存图片数据时，直接装载
@@ -100,19 +101,19 @@ public class WeatherActivity extends AppCompatActivity {
         if(weatherString!=null){
             //有缓存时直接解析天气数据
             Weather weather= Utility.handleWeatherResponse(weatherString);
-            weatherId=weather.basic.weatherId;
+            mweatherId=weather.basic.weatherId;
             showWeatherInfo(weather);
         }else {
           //无缓存时去服务器查询天气,通过主活动Intent传送过来的weather_id
-             weatherId=getIntent().getStringExtra("weather_id");
+             mweatherId=getIntent().getStringExtra("weather_id");
             weatherLayout.setVisibility(View.VISIBLE);
-            requestWeather(weatherId);//到服务器请求获取天气情况
+            requestWeather(mweatherId);//到服务器请求获取天气情况
         }
         //下拉刷新天气
         swipRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
-                requestWeather(weatherId);
+                requestWeather(mweatherId);
             }
         });
         //返回主页滑动页面按钮
@@ -160,6 +161,7 @@ public class WeatherActivity extends AppCompatActivity {
                             SharedPreferences.Editor editor=PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).edit();
                             editor.putString("weather",responseText);
                             editor.apply();
+                            mweatherId=weather.basic.weatherId;
                             showWeatherInfo(weather);
                             //装载背景图片
                             loadBingPic();
